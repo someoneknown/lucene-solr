@@ -190,6 +190,21 @@ public abstract class FilterLeafReader extends LeafReader {
     }
 
     @Override
+    public int getSeekCount() {
+      return in.getSeekCount();
+    }
+
+    @Override
+    public void addSeekCount(int x) {
+      in.addSeekCount(x);
+    }
+
+    @Override
+    public void addSeekCount() {
+      in.addSeekCount();
+    }
+
+    @Override
     public BytesRef next() throws IOException {
       return in.next();
     }

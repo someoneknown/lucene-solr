@@ -17,6 +17,9 @@
 package org.apache.lucene.index;
 
 
+import org.apache.lucene.search.Scorer;
+
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -32,7 +35,8 @@ public abstract class IndexReaderContext {
   public final int docBaseInParent;
   /** the ord for this reader in the parent, <tt>0</tt> if parent is null */
   public final int ordInParent;
-
+  protected List<Scorer> scorers;
+  protected List<PointValues> pointValuesList;
   // An object that uniquely identifies this context without referencing
   // segments. The goal is to make it fine to have references to this
   // identity object, even after the index reader has been closed
@@ -45,6 +49,8 @@ public abstract class IndexReaderContext {
     this.docBaseInParent = docBaseInParent;
     this.ordInParent = ordInParent;
     this.isTopLevel = parent==null;
+    scorers = new ArrayList<Scorer>();
+    pointValuesList = new ArrayList<PointValues>();
   }
 
   /** Expert: Return an {@link Object} that uniquely identifies this context.
@@ -74,4 +80,16 @@ public abstract class IndexReaderContext {
    * otherwise <code>null</code>.
    */
   public abstract List<IndexReaderContext> children();
+  public void addScorer(Scorer sc) {
+    scorers.add(sc);
+  }
+  public List<Scorer> getScorers() {
+    return scorers;
+  }
+  public void addPointValues(PointValues pv) {
+    pointValuesList.add(pv);
+  }
+  public List<PointValues> getPointValuesList() {
+    return pointValuesList;
+  }
 }

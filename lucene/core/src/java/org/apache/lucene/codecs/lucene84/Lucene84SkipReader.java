@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.lucene.codecs.MultiLevelSkipListReader;
+import org.apache.lucene.index.PostingsEnum;
 import org.apache.lucene.store.IndexInput;
 
 /**
@@ -115,7 +116,22 @@ class Lucene84SkipReader extends MultiLevelSkipListReader {
       assert posBasePointer == 0;
     }
   }
+  public void init(long skipPointer, long docBasePointer, long posBasePointer, long payBasePointer, int df, PostingsEnum ps) throws IOException {
+    super.init(skipPointer, trim(df), ps);
+    lastDocPointer = docBasePointer;
+    lastPosPointer = posBasePointer;
+    lastPayPointer = payBasePointer;
 
+    Arrays.fill(docPointer, docBasePointer);
+    if (posPointer != null) {
+      Arrays.fill(posPointer, posBasePointer);
+      if (payPointer != null) {
+        Arrays.fill(payPointer, payBasePointer);
+      }
+    } else {
+      assert posBasePointer == 0;
+    }
+  }
   /** Returns the doc pointer of the doc to which the last call of 
    * {@link MultiLevelSkipListReader#skipTo(int)} has skipped.  */
   public long getDocPointer() {

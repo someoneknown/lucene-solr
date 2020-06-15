@@ -81,17 +81,23 @@ public abstract class IndexReader implements Closeable {
   private boolean closed = false;
   private boolean closedByChild = false;
   private final AtomicInteger refCount = new AtomicInteger(1);
-
+  protected int seekCountTermDic;
   IndexReader() {
     if (!(this instanceof CompositeReader || this instanceof LeafReader))
       throw new Error("IndexReader should never be directly extended, subclass LeafReader or CompositeReader instead.");
   }
-
+  public int getSeekCountTermDic() {
+    return seekCountTermDic;
+  }
+  public void addSeekCountTermDic(int x) {
+    seekCountTermDic += x;
+  }
   /**
    * A utility class that gives hooks in order to help build a cache based on
    * the data that is contained in this index. 
    * @lucene.experimental
    */
+
   public static interface CacheHelper {
 
     /**

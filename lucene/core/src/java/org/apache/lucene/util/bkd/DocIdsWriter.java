@@ -18,6 +18,7 @@ package org.apache.lucene.util.bkd;
 
 import java.io.IOException;
 
+import org.apache.lucene.index.PointValues;
 import org.apache.lucene.index.PointValues.IntersectVisitor;
 import org.apache.lucene.store.DataOutput;
 import org.apache.lucene.store.IndexInput;
@@ -81,7 +82,22 @@ class DocIdsWriter {
         throw new IOException("Unsupported number of bits per value: " + bpv);
     }
   }
-
+  static void readInts(IndexInput in, int count, int[] docIDs, PointValues pv) throws IOException {
+    final int bpv = in.readByte();
+    switch (bpv) {
+      case 0:
+        readDeltaVInts(in, count, docIDs, pv);
+        break;
+      case 32:
+        readInts32(in, count, docIDs, pv);
+        break;
+      case 24:
+        readInts24(in, count, docIDs, pv);
+        break;
+      default:
+        throw new IOException("Unsupported number of bits per value: " + bpv);
+    }
+  }
   private static void readDeltaVInts(IndexInput in, int count, int[] docIDs) throws IOException {
     int doc = 0;
     for (int i = 0; i < count; i++) {
@@ -89,13 +105,26 @@ class DocIdsWriter {
       docIDs[i] = doc;
     }
   }
-
+  private static void readDeltaVInts(IndexInput in, int count, int[] docIDs, PointValues pv) throws IOException {
+    int doc = 0;
+    for (int i = 0; i < count; i++) {
+      doc += in.readVInt();
+      pv.addSeekCountPoints();
+      docIDs[i] = doc;
+    }
+  }
   static <T> void readInts32(IndexInput in, int count, int[] docIDs) throws IOException {
     for (int i = 0; i < count; i++) {
       docIDs[i] = in.readInt();
     }
   }
 
+  static <T> void readInts32(IndexInput in, int count, int[] docIDs, PointValues pv) throws IOException {
+    for (int i = 0; i < count; i++) {
+      docIDs[i] = in.readInt();
+      pv.addSeekCountPoints();
+    }
+  }
   private static void readInts24(IndexInput in, int count, int[] docIDs) throws IOException {
     int i;
     for (i = 0; i < count - 7; i += 8) {
@@ -115,7 +144,27 @@ class DocIdsWriter {
       docIDs[i] = (Short.toUnsignedInt(in.readShort()) << 8) | Byte.toUnsignedInt(in.readByte());
     }
   }
-
+  private static void readInts24(IndexInput in, int count, int[] docIDs, PointValues pv) throws IOException {
+    int i;
+    for (i = 0; i < count - 7; i += 8) {
+      long l1 = in.readLong();
+      long l2 = in.readLong();
+      long l3 = in.readLong();
+      pv.addSeekCountPoints(3);
+      docIDs[i] =  (int) (l1 >>> 40);
+      docIDs[i+1] = (int) (l1 >>> 16) & 0xffffff;
+      docIDs[i+2] = (int) (((l1 & 0xffff) << 8) | (l2 >>> 56));
+      docIDs[i+3] = (int) (l2 >>> 32) & 0xffffff;
+      docIDs[i+4] = (int) (l2 >>> 8) & 0xffffff;
+      docIDs[i+5] = (int) (((l2 & 0xff) << 16) | (l3 >>> 48));
+      docIDs[i+6] = (int) (l3 >>> 24) & 0xffffff;
+      docIDs[i+7] = (int) l3 & 0xffffff;
+    }
+    for (; i < count; ++i) {
+      docIDs[i] = (Short.toUnsignedInt(in.readShort()) << 8) | Byte.toUnsignedInt(in.readByte());
+      pv.addSeekCountPoints(2);
+    }
+  }
   /** Read {@code count} integers and feed the result directly to {@link IntersectVisitor#visit(int)}. */
   static void readInts(IndexInput in, int count, IntersectVisitor visitor) throws IOException {
     final int bpv = in.readByte();
@@ -133,7 +182,22 @@ class DocIdsWriter {
         throw new IOException("Unsupported number of bits per value: " + bpv);
     }
   }
-
+  static void readInts(IndexInput in, int count, IntersectVisitor visitor, PointValues pv) throws IOException {
+    final int bpv = in.readByte();
+    switch (bpv) {
+      case 0:
+        readDeltaVInts(in, count, visitor, pv);
+        break;
+      case 32:
+        readInts32(in, count, visitor, pv);
+        break;
+      case 24:
+        readInts24(in, count, visitor, pv);
+        break;
+      default:
+        throw new IOException("Unsupported number of bits per value: " + bpv);
+    }
+  }
   private static void readDeltaVInts(IndexInput in, int count, IntersectVisitor visitor) throws IOException {
     int doc = 0;
     for (int i = 0; i < count; i++) {
@@ -141,13 +205,25 @@ class DocIdsWriter {
       visitor.visit(doc);
     }
   }
-
+  private static void readDeltaVInts(IndexInput in, int count, IntersectVisitor visitor, PointValues pv) throws IOException {
+    int doc = 0;
+    for (int i = 0; i < count; i++) {
+      doc += in.readVInt();
+      pv.addSeekCountPoints();
+      visitor.visit(doc);
+    }
+  }
   private static void readInts32(IndexInput in, int count, IntersectVisitor visitor) throws IOException {
     for (int i = 0; i < count; i++) {
       visitor.visit(in.readInt());
     }
   }
-
+  private static void readInts32(IndexInput in, int count, IntersectVisitor visitor, PointValues pv) throws IOException {
+    for (int i = 0; i < count; i++) {
+      visitor.visit(in.readInt());
+      pv.addSeekCountPoints();
+    }
+  }
   private static void readInts24(IndexInput in, int count, IntersectVisitor visitor) throws IOException {
     int i;
     for (i = 0; i < count - 7; i += 8) {
@@ -165,6 +241,27 @@ class DocIdsWriter {
     }
     for (; i < count; ++i) {
       visitor.visit((Short.toUnsignedInt(in.readShort()) << 8) | Byte.toUnsignedInt(in.readByte()));
+    }
+  }
+  private static void readInts24(IndexInput in, int count, IntersectVisitor visitor, PointValues pv) throws IOException {
+    int i;
+    for (i = 0; i < count - 7; i += 8) {
+      long l1 = in.readLong();
+      long l2 = in.readLong();
+      long l3 = in.readLong();
+      pv.addSeekCountPoints(3);
+      visitor.visit((int) (l1 >>> 40));
+      visitor.visit((int) (l1 >>> 16) & 0xffffff);
+      visitor.visit((int) (((l1 & 0xffff) << 8) | (l2 >>> 56)));
+      visitor.visit((int) (l2 >>> 32) & 0xffffff);
+      visitor.visit((int) (l2 >>> 8) & 0xffffff);
+      visitor.visit((int) (((l2 & 0xff) << 16) | (l3 >>> 48)));
+      visitor.visit((int) (l3 >>> 24) & 0xffffff);
+      visitor.visit((int) l3 & 0xffffff);
+    }
+    for (; i < count; ++i) {
+      visitor.visit((Short.toUnsignedInt(in.readShort()) << 8) | Byte.toUnsignedInt(in.readByte()));
+      pv.addSeekCountPoints(2);
     }
   }
 }

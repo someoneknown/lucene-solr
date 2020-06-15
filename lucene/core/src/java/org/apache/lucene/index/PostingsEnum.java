@@ -61,10 +61,29 @@ public abstract class PostingsEnum extends DocIdSetIterator {
   public static boolean featureRequested(int flags, short feature) {
     return (flags & feature) == feature;
   }
-
+  /**
+   * Total Seek in postings
+   */
+  protected int seekCountPostings;
   /** Sole constructor. (For invocation by subclass 
    *  constructors, typically implicit.) */
   protected PostingsEnum() {
+  }
+
+  public int getSeekCountPostings() {
+    return seekCountPostings;
+  }
+
+  public void setSeekCountPostings(int seekCountPostings) {
+    this.seekCountPostings = seekCountPostings;
+  }
+
+  public void addSeekCountPostings() {
+    seekCountPostings += 1;
+  }
+
+  public void addSeekCountPostings(int x) {
+    seekCountPostings += x;
   }
 
   /**
