@@ -17,6 +17,8 @@
 package org.apache.lucene.search;
 
 
+import org.apache.lucene.index.PostingsEnum;
+
 import java.io.IOException;
 import java.util.Objects;
 
@@ -42,7 +44,7 @@ public abstract class Scorer extends Scorable {
 
   /** the Scorer's parent Weight */
   protected final Weight weight;
-
+  protected PostingsEnum postingsEnum;
   /**
    * Constructs a Scorer
    * @param weight The scorers <code>Weight</code>.
@@ -50,7 +52,9 @@ public abstract class Scorer extends Scorable {
   protected Scorer(Weight weight) {
     this.weight = Objects.requireNonNull(weight);
   }
-
+  public PostingsEnum getPostingsEnum() {
+    return postingsEnum;
+  }
   /** returns parent Weight
    * @lucene.experimental
    */

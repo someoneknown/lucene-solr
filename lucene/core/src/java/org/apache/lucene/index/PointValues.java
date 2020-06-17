@@ -90,7 +90,20 @@ public abstract class PointValues {
 
   /** Maximum number of index dimensions */
   public static final int MAX_INDEX_DIMENSIONS = BKDWriter.MAX_INDEX_DIMS;
+  protected int seekCountPoints;
 
+  public int getSeekCountPoints() {
+    return seekCountPoints;
+  }
+  public void addSeekCountPoints() {
+    seekCountPoints++;
+  }
+  public void addSeekCountPoints(int x) {
+    seekCountPoints += x;
+  }
+  public void setSeekCountPoints(int x) {
+    seekCountPoints = x;
+  }
   /** Return the cumulated number of points across all leaves of the given
    * {@link IndexReader}. Leaves that do not have points for the given field
    * are ignored.

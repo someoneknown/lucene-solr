@@ -58,6 +58,11 @@ public abstract class LeafReader extends IndexReader {
     return readerContext;
   }
 
+  @Override
+  public int getSeekCountTermDic() {
+    return super.getSeekCountTermDic();
+  }
+
   /**
    * Optional method: Return a {@link IndexReader.CacheHelper} that can be used to cache
    * based on the content of this leaf regardless of deletions. Two readers
@@ -80,8 +85,10 @@ public abstract class LeafReader extends IndexReader {
     }
     final TermsEnum termsEnum = terms.iterator();
     if (termsEnum.seekExact(term.bytes())) {
+      addSeekCountTermDic(termsEnum.getSeekCount());
       return termsEnum.docFreq();
     } else {
+      addSeekCountTermDic(termsEnum.getSeekCount());
       return 0;
     }
   }

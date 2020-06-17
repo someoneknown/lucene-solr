@@ -132,7 +132,7 @@ public class CompiledAutomaton implements Accountable {
     return foundState;
   }
 
-  /** Create this.  If finite is null, we use {@link Operations#isFinite}
+  /** Create this.  If finite is null, we use
    *  to determine whether it is finite.  If simplify is true, we run
    *  possibly expensive operations to determine if the automaton is one
    *  the cases in {@link CompiledAutomaton.AUTOMATON_TYPE}. */
@@ -141,7 +141,7 @@ public class CompiledAutomaton implements Accountable {
   }
 
 
-  /** Create this.  If finite is null, we use {@link Operations#isFinite}
+  /** Create this.  If finite is null, we use
    *  to determine whether it is finite.  If simplify is true, we run
    *  possibly expensive operations to determine if the automaton is one
    *  the cases in {@link CompiledAutomaton.AUTOMATON_TYPE}. If simplify
@@ -340,6 +340,7 @@ public class CompiledAutomaton implements Accountable {
     case SINGLE:
       return new SingleTermsEnum(terms.iterator(), term);
     case NORMAL:
+      terms.isTypeNormal = true;
       return terms.intersect(this, null);
     default:
       // unreachable
