@@ -18,7 +18,6 @@ package org.apache.lucene.util.bkd;
 
 import java.io.IOException;
 
-import org.apache.lucene.index.PointValues;
 import org.apache.lucene.index.PointValues.IntersectVisitor;
 import org.apache.lucene.store.DataOutput;
 import org.apache.lucene.store.IndexInput;
@@ -82,6 +81,7 @@ class DocIdsWriter {
         throw new IOException("Unsupported number of bits per value: " + bpv);
     }
   }
+
   private static void readDeltaVInts(IndexInput in, int count, int[] docIDs) throws IOException {
     int doc = 0;
     for (int i = 0; i < count; i++) {
@@ -89,6 +89,7 @@ class DocIdsWriter {
       docIDs[i] = doc;
     }
   }
+
   static <T> void readInts32(IndexInput in, int count, int[] docIDs) throws IOException {
     for (int i = 0; i < count; i++) {
       docIDs[i] = in.readInt();
@@ -114,6 +115,7 @@ class DocIdsWriter {
       docIDs[i] = (Short.toUnsignedInt(in.readShort()) << 8) | Byte.toUnsignedInt(in.readByte());
     }
   }
+
   /** Read {@code count} integers and feed the result directly to {@link IntersectVisitor#visit(int)}. */
   static void readInts(IndexInput in, int count, IntersectVisitor visitor) throws IOException {
     final int bpv = in.readByte();
@@ -131,6 +133,7 @@ class DocIdsWriter {
         throw new IOException("Unsupported number of bits per value: " + bpv);
     }
   }
+
   private static void readDeltaVInts(IndexInput in, int count, IntersectVisitor visitor) throws IOException {
     int doc = 0;
     for (int i = 0; i < count; i++) {
@@ -138,11 +141,13 @@ class DocIdsWriter {
       visitor.visit(doc);
     }
   }
+
   private static void readInts32(IndexInput in, int count, IntersectVisitor visitor) throws IOException {
     for (int i = 0; i < count; i++) {
       visitor.visit(in.readInt());
     }
   }
+
   private static void readInts24(IndexInput in, int count, IntersectVisitor visitor) throws IOException {
     int i;
     for (i = 0; i < count - 7; i += 8) {

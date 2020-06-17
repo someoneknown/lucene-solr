@@ -140,24 +140,7 @@ public final class Lucene84PostingsReader extends PostingsReaderBase {
       }
     }
   }
-  static void readVIntBlock(IndexInput docIn, long[] docBuffer,
-                            long[] freqBuffer, int num, boolean indexHasFreq, PostingsEnum ps) throws IOException {
-    if (indexHasFreq) {
-      for(int i=0;i<num;i++) {
-        final int code = docIn.readVInt();
-        docBuffer[i] = code >>> 1;
-        if ((code & 1) != 0) {
-          freqBuffer[i] = 1;
-        } else {
-          freqBuffer[i] = docIn.readVInt();
-        }
-      }
-    } else {
-      for(int i=0;i<num;i++) {
-        docBuffer[i] = docIn.readVInt();
-      }
-    }
-  }
+
   static void prefixSum(long[] buffer, int count, long base) {
     buffer[0] += base;
     for (int i = 1; i < count; ++i) {
@@ -743,7 +726,7 @@ public final class Lucene84PostingsReader extends PostingsReaderBase {
         docBuffer[1] = NO_MORE_DOCS;
         blockUpto++;
       } else {
-        readVIntBlock(docIn, docBuffer, freqBuffer, left, true);
+        readVIntBlock(docIn, docBuffer, freqBuffer, left);
         prefixSum(docBuffer, left, accum);
         docBuffer[left] = NO_MORE_DOCS;
         blockUpto += left;
@@ -1123,7 +1106,7 @@ public final class Lucene84PostingsReader extends PostingsReaderBase {
         }
         blockUpto += BLOCK_SIZE;
       } else {
-        readVIntBlock(docIn, docBuffer, freqBuffer, left, indexHasFreqs);
+        readVIntBlock(docIn, docBuffer, freqBuffer, left);
         prefixSum(docBuffer, left, accum);
         docBuffer[left] = NO_MORE_DOCS;
         blockUpto += left;
@@ -1328,7 +1311,7 @@ public final class Lucene84PostingsReader extends PostingsReaderBase {
         forDeltaUtil.decodeAndPrefixSum(docIn, accum, docBuffer);
         pforUtil.decode(docIn, freqBuffer);
       } else {
-        readVIntBlock(docIn, docBuffer, freqBuffer, left, true);
+        readVIntBlock(docIn, docBuffer, freqBuffer, left);
         prefixSum(docBuffer, left, accum);
         docBuffer[left] = NO_MORE_DOCS;
       }

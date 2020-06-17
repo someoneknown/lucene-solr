@@ -36,7 +36,7 @@ import org.apache.lucene.util.MathUtil;
  *
  * @lucene.experimental */
 
-  public final class BKDReader extends PointValues implements Accountable {
+public final class BKDReader extends PointValues implements Accountable {
 
   private static abstract class BKDInput extends DataInput implements Cloneable {
     abstract long getMinLeafBlockFP();
