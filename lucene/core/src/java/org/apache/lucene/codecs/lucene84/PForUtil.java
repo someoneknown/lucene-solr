@@ -112,22 +112,7 @@ final class PForUtil {
       longs[Byte.toUnsignedInt(in.readByte())] |= Byte.toUnsignedLong(in.readByte()) << bitsPerValue;
     }
   }
-  void decode(DataInput in, long[] longs, PostingsEnum ps) throws IOException {
-    final int token = Byte.toUnsignedInt(in.readByte());
-    ps.addSeekCountPostings();
-    final int bitsPerValue = token & 0x1f;
-    final int numExceptions = token >>> 5;
-    if (bitsPerValue == 0) {
-      Arrays.fill(longs, 0, ForUtil.BLOCK_SIZE, in.readVLong());
-    } else {
-      forUtil.decode(bitsPerValue, in, longs);
-    }
-    ps.addSeekCountPostings();
-    for (int i = 0; i < numExceptions; ++i) {
-      longs[Byte.toUnsignedInt(in.readByte())] |= Byte.toUnsignedLong(in.readByte()) << bitsPerValue;
-      ps.addSeekCountPostings(2);
-    }
-  }
+
   /**
    * Skip 128 integers.
    */
@@ -140,19 +125,6 @@ final class PForUtil {
       in.skipBytes((numExceptions << 1));
     } else {
       in.skipBytes(forUtil.numBytes(bitsPerValue) + (numExceptions << 1));
-    }
-  }
-  void skip(DataInput in, PostingsEnum ps) throws IOException {
-    final int token = Byte.toUnsignedInt(in.readByte());
-    ps.addSeekCountPostings();
-    final int bitsPerValue = token & 0x1f;
-    final int numExceptions = token >>> 5;
-    if (bitsPerValue == 0) {
-      in.readVLong();
-      ps.addSeekCountPostings();
-      in.skipBytes((numExceptions << 1), ps);
-    } else {
-      in.skipBytes(forUtil.numBytes(bitsPerValue) + (numExceptions << 1), ps);
     }
   }
 }

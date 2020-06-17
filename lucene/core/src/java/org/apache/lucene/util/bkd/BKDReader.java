@@ -36,7 +36,7 @@ import org.apache.lucene.util.MathUtil;
  *
  * @lucene.experimental */
 
-public final class BKDReader extends PointValues implements Accountable {
+  public final class BKDReader extends PointValues implements Accountable {
 
   private static abstract class BKDInput extends DataInput implements Cloneable {
     abstract long getMinLeafBlockFP();
@@ -187,20 +187,16 @@ public final class BKDReader extends PointValues implements Accountable {
     numDataDims = in.readVInt();
     if (version >= BKDWriter.VERSION_SELECTIVE_INDEXING) {
       numIndexDims = in.readVInt();
-      seekCountPoints++;
     } else {
       numIndexDims = numDataDims;
     }
     maxPointsInLeafNode = in.readVInt();
-    seekCountPoints++;
     bytesPerDim = in.readVInt();
-    seekCountPoints++;
     packedBytesLength = numDataDims * bytesPerDim;
     packedIndexBytesLength = numIndexDims * bytesPerDim;
 
     // Read index:
     numLeaves = in.readVInt();
-    seekCountPoints++;
     assert numLeaves > 0;
     leafNodeOffset = numLeaves;
 
@@ -208,9 +204,7 @@ public final class BKDReader extends PointValues implements Accountable {
     maxPackedValue = new byte[packedIndexBytesLength];
 
     in.readBytes(minPackedValue, 0, packedIndexBytesLength);
-    seekCountPoints++;
     in.readBytes(maxPackedValue, 0, packedIndexBytesLength);
-    seekCountPoints++;
 
     for(int dim=0;dim<numIndexDims;dim++) {
       if (FutureArrays.compareUnsigned(minPackedValue, dim * bytesPerDim, dim * bytesPerDim + bytesPerDim, maxPackedValue, dim * bytesPerDim, dim * bytesPerDim + bytesPerDim) > 0) {
@@ -219,19 +213,15 @@ public final class BKDReader extends PointValues implements Accountable {
     }
     
     pointCount = in.readVLong();
-    seekCountPoints++;
     docCount = in.readVInt();
-    seekCountPoints++;
 
     int numBytes = in.readVInt();
-    seekCountPoints++;
     IndexInput slice = in.slice("packedIndex", in.getFilePointer(), numBytes);
     if (offHeap) {
       packedIndex = new BKDOffHeapInput(slice);
     } else {
       packedIndex = new BKDOnHeapInput(slice, numBytes);
     }
-    seekCountPoints++;
     this.in = in;
   }
 
@@ -280,6 +270,7 @@ public final class BKDReader extends PointValues implements Accountable {
         seekCountPoints += x;
       }
     }
+
     IndexTree() {
       int treeDepth = getTreeDepth();
       splitPackedValueStack = new byte[treeDepth+1][];
@@ -350,7 +341,6 @@ public final class BKDReader extends PointValues implements Accountable {
       negativeDeltas[level*numIndexDims+splitDim] = false;
       try {
         in.setPosition(nodePosition);
-        increment();
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
@@ -444,7 +434,6 @@ public final class BKDReader extends PointValues implements Accountable {
         // read leaf block FP delta
         if (isLeft == false) {
           leafBlockFPStack[level] += in.readVLong();
-          increment();
         }
 
         if (isLeafNode()) {
@@ -453,7 +442,6 @@ public final class BKDReader extends PointValues implements Accountable {
 
           // read split dim, prefix, firstDiffByteDelta encoded as int:
           int code = in.readVInt();
-          increment();
           splitDim = code % numIndexDims;
           splitDims[level] = splitDim;
           code /= numIndexDims;
@@ -472,7 +460,6 @@ public final class BKDReader extends PointValues implements Accountable {
             int oldByte = splitValuesStack[level][splitDim * bytesPerDim + prefix] & 0xFF;
             splitValuesStack[level][splitDim * bytesPerDim + prefix] = (byte) (oldByte + firstDiffByteDelta);
             in.readBytes(splitValuesStack[level], splitDim * bytesPerDim + prefix + 1, suffix - 1);
-            increment();
           } else {
             // our split value is == last split value in this dim, which can happen when there are many duplicate values
           }
@@ -480,7 +467,6 @@ public final class BKDReader extends PointValues implements Accountable {
           int leftNumBytes;
           if (nodeID * 2 < leafNodeOffset) {
             leftNumBytes = in.readVInt();
-            increment();
           } else {
             leftNumBytes = 0;
           }
@@ -599,8 +585,7 @@ public final class BKDReader extends PointValues implements Accountable {
     // How many points are stored in this leaf cell:
     int count = in.readVInt();
     // No need to call grow(), it has been called up-front
-    seekCountPoints++;
-    DocIdsWriter.readInts(in, count, visitor, this);
+    DocIdsWriter.readInts(in, count, visitor);
   }
 
   int readDocIDs(IndexInput in, long blockFP, BKDReaderDocIDSetIterator iterator) throws IOException {
@@ -608,8 +593,7 @@ public final class BKDReader extends PointValues implements Accountable {
     seekCountPoints++;
     // How many points are stored in this leaf cell:
     int count = in.readVInt();
-    seekCountPoints++;
-    DocIdsWriter.readInts(in, count, iterator.docIDs, this);
+    DocIdsWriter.readInts(in, count, iterator.docIDs);
 
     return count;
   }
@@ -721,7 +705,6 @@ public final class BKDReader extends PointValues implements Accountable {
       int prefix = commonPrefixLengths[dim];
       in.readBytes(minPackedValue, dim * bytesPerDim + prefix, bytesPerDim - prefix);
       in.readBytes(maxPackedValue, dim * bytesPerDim + prefix, bytesPerDim - prefix);
-      addSeekCountPoints(2);
     }
   }
 
@@ -730,11 +713,9 @@ public final class BKDReader extends PointValues implements Accountable {
     int i;
     for (i = 0; i < count;) {
       int length = in.readVInt();
-      seekCountPoints++;
       for(int dim = 0; dim < numDataDims; dim++) {
         int prefix = commonPrefixLengths[dim];
         in.readBytes(scratchPackedValue, dim*bytesPerDim + prefix, bytesPerDim - prefix);
-        seekCountPoints++;
       }
       scratchIterator.reset(i, length);
       visitor.visit(scratchIterator, scratchPackedValue);
@@ -760,12 +741,10 @@ public final class BKDReader extends PointValues implements Accountable {
     for (i = 0; i < count; ) {
       scratchPackedValue[compressedByteOffset] = in.readByte();
       final int runLen = Byte.toUnsignedInt(in.readByte());
-      addSeekCountPoints(2);
       for (int j = 0; j < runLen; ++j) {
         for(int dim = 0; dim < numDataDims; dim++) {
           int prefix = commonPrefixLengths[dim];
           in.readBytes(scratchPackedValue, dim*bytesPerDim + prefix, bytesPerDim - prefix);
-          seekCountPoints++;
         }
         visitor.visit(scratchIterator.docIDs[i+j], scratchPackedValue);
       }
@@ -778,7 +757,6 @@ public final class BKDReader extends PointValues implements Accountable {
 
   private int readCompressedDim(IndexInput in) throws IOException {
     int compressedDim = in.readByte();
-    seekCountPoints++;
     if (compressedDim < -2 || compressedDim >= numDataDims || (version < BKDWriter.VERSION_LOW_CARDINALITY_LEAVES && compressedDim == -2)) {
       throw new CorruptIndexException("Got compressedDim="+compressedDim, in);
     }
@@ -788,11 +766,9 @@ public final class BKDReader extends PointValues implements Accountable {
   private void readCommonPrefixes(int[] commonPrefixLengths, byte[] scratchPackedValue, IndexInput in) throws IOException {
     for(int dim=0;dim<numDataDims;dim++) {
       int prefix = in.readVInt();
-      seekCountPoints++;
       commonPrefixLengths[dim] = prefix;
       if (prefix > 0) {
         in.readBytes(scratchPackedValue, dim*bytesPerDim, prefix);
-        seekCountPoints++;
       }
       //System.out.println("R: " + dim + " of " + numDims + " prefix=" + prefix);
     }

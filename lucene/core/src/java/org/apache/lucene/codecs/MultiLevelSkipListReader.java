@@ -214,7 +214,6 @@ public abstract class MultiLevelSkipListReader implements Closeable {
     skipDoc[level] = lastDoc;
     if (level > 0) {
       childPointer[level] = skipStream[level].readVLong() + skipPointer[level - 1];
-      ps.addSeekCountPostings();
     }
   }
   @Override
@@ -315,7 +314,6 @@ public abstract class MultiLevelSkipListReader implements Closeable {
     for (int i = numberOfSkipLevels - 1; i > 0; i--) {
       // the length of the current level
       long length = skipStream[0].readVLong();
-      ps.addSeekCountPostings();
 
       // the start pointer of the current level
       skipPointer[i] = skipStream[0].getFilePointer();

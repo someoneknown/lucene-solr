@@ -169,7 +169,6 @@ final class SegmentTermsEnumFrame {
     ste.in.seek(fp);
     ste.addSeekCount();
     int code = ste.in.readVInt();
-    ste.addSeekCount();
     entCount = code >>> 1;
     assert entCount > 0;
     isLastInFloor = (code & 1) != 0;
@@ -185,7 +184,6 @@ final class SegmentTermsEnumFrame {
     // term suffixes:
     if (version >= BlockTreeTermsReader.VERSION_COMPRESSED_SUFFIXES) {
       final long codeL = ste.in.readVLong();
-      ste.addSeekCount();
       isLeafBlock = (codeL & 0x04) != 0;
       final int numSuffixBytes = (int) (codeL >>> 3);
       if (suffixBytes.length < numSuffixBytes) {
@@ -197,7 +195,6 @@ final class SegmentTermsEnumFrame {
         throw new CorruptIndexException(e.getMessage(), ste.in, e);
       }
       compressionAlg.read(ste.in, suffixBytes, numSuffixBytes);
-      ste.addSeekCount();
       suffixesReader.reset(suffixBytes, 0, numSuffixBytes);
 
       int numSuffixLengthBytes = ste.in.readVInt();
@@ -210,19 +207,16 @@ final class SegmentTermsEnumFrame {
         Arrays.fill(suffixLengthBytes, 0, numSuffixLengthBytes, ste.in.readByte());
       } else {
         ste.in.readBytes(suffixLengthBytes, 0, numSuffixLengthBytes);
-        ste.addSeekCount();
       }
       suffixLengthsReader.reset(suffixLengthBytes, 0, numSuffixLengthBytes);
     } else {
       code = ste.in.readVInt();
-      ste.addSeekCount();
       isLeafBlock = (code & 1) != 0;
       int numBytes = code >>> 1;
       if (suffixBytes.length < numBytes) {
         suffixBytes = new byte[ArrayUtil.oversize(numBytes, 1)];
       }
       ste.in.readBytes(suffixBytes, 0, numBytes);
-      ste.addSeekCount();
       suffixesReader.reset(suffixBytes, 0, numBytes);
     }
     totalSuffixBytes = ste.in.getFilePointer() - startSuffixFP;
@@ -237,12 +231,10 @@ final class SegmentTermsEnumFrame {
 
     // stats
     int numBytes = ste.in.readVInt();
-    ste.addSeekCount();
     if (statBytes.length < numBytes) {
       statBytes = new byte[ArrayUtil.oversize(numBytes, 1)];
     }
     ste.in.readBytes(statBytes, 0, numBytes);
-    ste.addSeekCount();
     statsReader.reset(statBytes, 0, numBytes);
     statsSingletonRunLength = 0;
     metaDataUpto = 0;
@@ -255,12 +247,10 @@ final class SegmentTermsEnumFrame {
     // that's rare so won't help much
     // metadata
     numBytes = ste.in.readVInt();
-    ste.addSeekCount();
     if (bytes.length < numBytes) {
       bytes = new byte[ArrayUtil.oversize(numBytes, 1)];
     }
     ste.in.readBytes(bytes, 0, numBytes);
-    ste.addSeekCount();
     bytesReader.reset(bytes, 0, numBytes);
 
     // Sub-blocks of a single floor block are always

@@ -140,7 +140,7 @@ final class MultiTermQueryConstantScoreWrapper<Q extends MultiTermQuery> extends
 
         final TermsEnum termsEnum = query.getTermsEnum(terms);
         if(termsEnum != null && terms.isTypeNormal) {
-          context.reader().addSeekCountTermDic(10);
+          context.reader().addSeekCountTermDic(1);
         }
         assert termsEnum != null;
 
