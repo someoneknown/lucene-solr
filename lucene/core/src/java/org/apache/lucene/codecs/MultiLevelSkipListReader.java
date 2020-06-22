@@ -209,7 +209,7 @@ public abstract class MultiLevelSkipListReader implements Closeable {
   }
   protected void seekChild(int level, PostingsEnum ps) throws IOException {
     skipStream[level].seek(lastChildPointer);
-    ps.addSeekCountPostings();
+    ps.incrementSeekCountPostings();
     numSkipped[level] = numSkipped[level + 1] - skipInterval[level + 1];
     skipDoc[level] = lastDoc;
     if (level > 0) {
@@ -307,7 +307,7 @@ public abstract class MultiLevelSkipListReader implements Closeable {
     }
 
     skipStream[0].seek(skipPointer[0]);
-    ps.addSeekCountPostings();
+    ps.incrementSeekCountPostings();
 
     int toBuffer = numberOfLevelsToBuffer;
 
@@ -330,7 +330,7 @@ public abstract class MultiLevelSkipListReader implements Closeable {
 
         // move base stream beyond the current level
         skipStream[0].seek(skipStream[0].getFilePointer() + length);
-        ps.addSeekCountPostings();
+        ps.incrementSeekCountPostings();
       }
     }
 

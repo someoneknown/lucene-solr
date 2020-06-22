@@ -195,13 +195,13 @@ public abstract class FilterLeafReader extends LeafReader {
     }
 
     @Override
-    public void addSeekCount(int x) {
-      in.addSeekCount(x);
+    public void incrementSeekCount(int x) {
+      in.incrementSeekCount(x);
     }
 
     @Override
-    public void addSeekCount() {
-      in.addSeekCount();
+    public void incrementSeekCount() {
+      in.incrementSeekCount();
     }
 
     @Override

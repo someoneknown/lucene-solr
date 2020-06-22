@@ -46,10 +46,10 @@ public abstract class TermsEnum implements BytesRefIterator {
   public int getSeekCount() {
     return seekCount;
   }
-  public void addSeekCount(int x) {
+  public void incrementSeekCount(int x) {
     seekCount += x;
   }
-  public void addSeekCount() {
+  public void incrementSeekCount() {
     seekCount++;
   }
   /** Sole constructor. (For invocation by subclass 

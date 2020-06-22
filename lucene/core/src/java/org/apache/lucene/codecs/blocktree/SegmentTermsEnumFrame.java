@@ -157,7 +157,7 @@ final class SegmentTermsEnumFrame {
     // that just pull a TermsEnum to
     // seekExact(TermState) don't pay this cost:
     if(ste.in == null) {
-      ste.addSeekCount();
+      ste.incrementSeekCount();
     }
     ste.initIndexInput();
     if (nextEnt != -1) {
@@ -167,7 +167,7 @@ final class SegmentTermsEnumFrame {
     //System.out.println("blc=" + blockLoadCount);
 
     ste.in.seek(fp);
-    ste.addSeekCount();
+    ste.incrementSeekCount();
     int code = ste.in.readVInt();
     entCount = code >>> 1;
     assert entCount > 0;

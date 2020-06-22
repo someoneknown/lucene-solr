@@ -78,11 +78,11 @@ public abstract class PostingsEnum extends DocIdSetIterator {
     this.seekCountPostings = seekCountPostings;
   }
 
-  public void addSeekCountPostings() {
+  public void incrementSeekCountPostings() {
     seekCountPostings += 1;
   }
 
-  public void addSeekCountPostings(int x) {
+  public void incrementSeekCountPostings(int x) {
     seekCountPostings += x;
   }
 

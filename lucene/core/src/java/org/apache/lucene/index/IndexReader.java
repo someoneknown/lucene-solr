@@ -89,7 +89,7 @@ public abstract class IndexReader implements Closeable {
   public int getSeekCountTermDic() {
     return seekCountTermDic;
   }
-  public void addSeekCountTermDic(int x) {
+  public void incrementSeekCountTermDic(int x) {
     seekCountTermDic += x;
   }
   /**

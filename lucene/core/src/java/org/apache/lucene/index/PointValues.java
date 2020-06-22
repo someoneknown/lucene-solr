@@ -95,10 +95,10 @@ public abstract class PointValues {
   public int getSeekCountPoints() {
     return seekCountPoints;
   }
-  public void addSeekCountPoints() {
+  public void incrementSeekCountPoints() {
     seekCountPoints++;
   }
-  public void addSeekCountPoints(int x) {
+  public void incrementSeekCountPoints(int x) {
     seekCountPoints += x;
   }
   public void setSeekCountPoints(int x) {
