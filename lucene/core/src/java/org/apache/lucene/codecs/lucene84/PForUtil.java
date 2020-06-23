@@ -19,7 +19,6 @@ package org.apache.lucene.codecs.lucene84;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.apache.lucene.index.PostingsEnum;
 import org.apache.lucene.store.DataInput;
 import org.apache.lucene.store.DataOutput;
 import org.apache.lucene.util.packed.PackedInts;
@@ -127,4 +126,5 @@ final class PForUtil {
       in.skipBytes(forUtil.numBytes(bitsPerValue) + (numExceptions << 1));
     }
   }
+
 }
