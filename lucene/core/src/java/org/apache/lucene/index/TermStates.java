@@ -122,10 +122,10 @@ public final class TermStates {
     if (terms != null) {
       final TermsEnum termsEnum = terms.iterator();
       if (termsEnum.seekExact(term.bytes())) {
-        ctx.reader().incrementSeekCountTermDic(termsEnum.getSeekCount());
+        ctx.reader().incrementSeekCountTermDic(termsEnum.getSeekCountTermDic());
         return termsEnum;
       } else {
-        ctx.reader().incrementSeekCountTermDic(termsEnum.getSeekCount());
+        ctx.reader().incrementSeekCountTermDic(termsEnum.getSeekCountTermDic());
       }
     }
     return null;
