@@ -84,6 +84,7 @@ public abstract class MultiLevelSkipListReader implements Closeable {
   
   private boolean inputIsBuffered;
   private final int skipMultiplier;
+  protected int seekCountPostings;
 
   /** Creates a {@code MultiLevelSkipListReader}. */
   protected MultiLevelSkipListReader(IndexInput skipStream, int maxSkipLevels, int skipInterval, int skipMultiplier) {
@@ -146,31 +147,7 @@ public abstract class MultiLevelSkipListReader implements Closeable {
     
     return numSkipped[0] - skipInterval[0] - 1;
   }
-  public int skipTo(int target, PostingsEnum ps) throws IOException {
 
-    // walk up the levels until highest level is found that has a skip
-    // for this target
-    int level = 0;
-    while (level < numberOfSkipLevels - 1 && target > skipDoc[level + 1]) {
-      level++;
-    }
-
-    while (level >= 0) {
-      if (target > skipDoc[level]) {
-        if (!loadNextSkip(level)) {
-          continue;
-        }
-      } else {
-        // no more skips on this level, go down one level
-        if (level > 0 && lastChildPointer > skipStream[level - 1].getFilePointer()) {
-          seekChild(level - 1, ps);
-        }
-        level--;
-      }
-    }
-
-    return numSkipped[0] - skipInterval[0] - 1;
-  }
   private boolean loadNextSkip(int level) throws IOException {
     // we have to skip, the target document is greater than the current
     // skip list entry        
@@ -201,21 +178,14 @@ public abstract class MultiLevelSkipListReader implements Closeable {
   /** Seeks the skip entry on the given level */
   protected void seekChild(int level) throws IOException {
     skipStream[level].seek(lastChildPointer);
+    seekCountPostings++;
     numSkipped[level] = numSkipped[level + 1] - skipInterval[level + 1];
     skipDoc[level] = lastDoc;
     if (level > 0) {
       childPointer[level] = skipStream[level].readVLong() + skipPointer[level - 1];
     }
   }
-  protected void seekChild(int level, PostingsEnum ps) throws IOException {
-    skipStream[level].seek(lastChildPointer);
-    ps.incrementSeekCountPostings();
-    numSkipped[level] = numSkipped[level + 1] - skipInterval[level + 1];
-    skipDoc[level] = lastDoc;
-    if (level > 0) {
-      childPointer[level] = skipStream[level].readVLong() + skipPointer[level - 1];
-    }
-  }
+
   @Override
   public void close() throws IOException {
     for (int i = 1; i < skipStream.length; i++) {
@@ -240,20 +210,7 @@ public abstract class MultiLevelSkipListReader implements Closeable {
     }
     loadSkipLevels();
   }
-  public void init(long skipPointer, int df, PostingsEnum ps) throws IOException {
-    this.skipPointer[0] = skipPointer;
-    this.docCount = df;
-    assert skipPointer >= 0 && skipPointer <= skipStream[0].length()
-            : "invalid skip pointer: " + skipPointer + ", length=" + skipStream[0].length();
-    Arrays.fill(skipDoc, 0);
-    Arrays.fill(numSkipped, 0);
-    Arrays.fill(childPointer, 0);
 
-    for (int i = 1; i < numberOfSkipLevels; i++) {
-      skipStream[i] = null;
-    }
-    loadSkipLevels(ps);
-  }
   /** Loads the skip levels  */
   private void loadSkipLevels() throws IOException {
     if (docCount <= skipInterval[0]) {
@@ -267,6 +224,7 @@ public abstract class MultiLevelSkipListReader implements Closeable {
     }
 
     skipStream[0].seek(skipPointer[0]);
+    seekCountPostings++;
     
     int toBuffer = numberOfLevelsToBuffer;
     
@@ -289,54 +247,23 @@ public abstract class MultiLevelSkipListReader implements Closeable {
         
         // move base stream beyond the current level
         skipStream[0].seek(skipStream[0].getFilePointer() + length);
+        seekCountPostings++;
       }
     }
    
     // use base stream for the lowest level
     skipPointer[0] = skipStream[0].getFilePointer();
   }
-  private void loadSkipLevels(PostingsEnum ps) throws IOException {
-    if (docCount <= skipInterval[0]) {
-      numberOfSkipLevels = 1;
-    } else {
-      numberOfSkipLevels = 1+MathUtil.log(docCount/skipInterval[0], skipMultiplier);
-    }
 
-    if (numberOfSkipLevels > maxNumberOfSkipLevels) {
-      numberOfSkipLevels = maxNumberOfSkipLevels;
-    }
-
-    skipStream[0].seek(skipPointer[0]);
-    ps.incrementSeekCountPostings();
-
-    int toBuffer = numberOfLevelsToBuffer;
-
-    for (int i = numberOfSkipLevels - 1; i > 0; i--) {
-      // the length of the current level
-      long length = skipStream[0].readVLong();
-
-      // the start pointer of the current level
-      skipPointer[i] = skipStream[0].getFilePointer();
-      if (toBuffer > 0) {
-        // buffer this level
-        skipStream[i] = new SkipBuffer(skipStream[0], (int) length);
-        toBuffer--;
-      } else {
-        // clone this stream, it is already at the start of the current level
-        skipStream[i] = skipStream[0].clone();
-        if (inputIsBuffered && length < BufferedIndexInput.BUFFER_SIZE) {
-          ((BufferedIndexInput) skipStream[i]).setBufferSize(Math.max(BufferedIndexInput.MIN_BUFFER_SIZE, (int) length));
-        }
-
-        // move base stream beyond the current level
-        skipStream[0].seek(skipStream[0].getFilePointer() + length);
-        ps.incrementSeekCountPostings();
-      }
-    }
-
-    // use base stream for the lowest level
-    skipPointer[0] = skipStream[0].getFilePointer();
+  /**
+   * Returns the value of seekCountPostings and resets the value to 0
+   */
+  public int getAndResetSeekCountPostings() {
+    int tmp = seekCountPostings;
+    seekCountPostings = 0;
+    return tmp;
   }
+
   /**
    * Subclasses must implement the actual skip data encoding in this method.
    *  
