@@ -480,12 +480,14 @@ public final class Lucene84PostingsReader extends PostingsReaderBase {
           // This is the first time this enum has skipped
           // since reset() was called; load the skip data:
           skipper.init(docTermStartFP+skipOffset, docTermStartFP, 0, 0, docFreq);
+          seekCountPostings += skipper.getAndResetSeekCountPostings();
           skipped = true;
         }
 
         // always plus one to fix the result, since skip position in Lucene84SkipReader 
         // is a little different from MultiLevelSkipListReader
         final int newDocUpto = skipper.skipTo(target) + 1;
+        seekCountPostings += skipper.getAndResetSeekCountPostings();
 
         if (newDocUpto >= blockUpto) {
           // Skipper moved
@@ -838,10 +840,12 @@ public final class Lucene84PostingsReader extends PostingsReaderBase {
           // This is the first time this enum has skipped
           // since reset() was called; load the skip data:
           skipper.init(docTermStartFP+skipOffset, docTermStartFP, posTermStartFP, payTermStartFP, docFreq);
+          seekCountPostings += skipper.getAndResetSeekCountPostings();
           skipped = true;
         }
 
         final int newDocUpto = skipper.skipTo(target) + 1;
+        seekCountPostings += skipper.getAndResetSeekCountPostings();
 
         if (newDocUpto > blockUpto - BLOCK_SIZE + docBufferUpto) {
           // Skipper moved
@@ -1066,6 +1070,7 @@ public final class Lucene84PostingsReader extends PostingsReaderBase {
           indexHasOffsets,
           indexHasPayloads);
       skipper.init(termState.docStartFP+termState.skipOffset, termState.docStartFP, termState.posStartFP, termState.payStartFP, docFreq);
+      seekCountPostings += skipper.getAndResetSeekCountPostings();
 
       // We set the last element of docBuffer to NO_MORE_DOCS, it helps save conditionals in advance()
       docBuffer[BLOCK_SIZE] = NO_MORE_DOCS;
@@ -1122,6 +1127,7 @@ public final class Lucene84PostingsReader extends PostingsReaderBase {
         // always plus one to fix the result, since skip position in Lucene84SkipReader
         // is a little different from MultiLevelSkipListReader
         final int newDocUpto = skipper.skipTo(target) + 1;
+        seekCountPostings += skipper.getAndResetSeekCountPostings();
 
         if (newDocUpto >= blockUpto) {
           // Skipper moved
@@ -1291,6 +1297,7 @@ public final class Lucene84PostingsReader extends PostingsReaderBase {
           indexHasOffsets,
           indexHasPayloads);
       skipper.init(docTermStartFP+termState.skipOffset, docTermStartFP, posTermStartFP, payTermStartFP, docFreq);
+      seekCountPostings += skipper.getAndResetSeekCountPostings();
     }
 
     @Override
@@ -1355,6 +1362,7 @@ public final class Lucene84PostingsReader extends PostingsReaderBase {
         // always plus one to fix the result, since skip position in Lucene84SkipReader
         // is a little different from MultiLevelSkipListReader
         final int newDocUpto = skipper.skipTo(target) + 1;
+        seekCountPostings += skipper.getAndResetSeekCountPostings();
 
         if (newDocUpto > docUpto) {
           // Skipper moved
@@ -1647,6 +1655,7 @@ public final class Lucene84PostingsReader extends PostingsReaderBase {
           indexHasOffsets,
           indexHasPayloads);
       skipper.init(docTermStartFP+termState.skipOffset, docTermStartFP, posTermStartFP, payTermStartFP, docFreq);
+      seekCountPostings += skipper.getAndResetSeekCountPostings();
 
       if (indexHasFreq == false) {
         for (int i = 0; i < ForUtil.BLOCK_SIZE; ++i) {
@@ -1781,6 +1790,7 @@ public final class Lucene84PostingsReader extends PostingsReaderBase {
         // always plus one to fix the result, since skip position in Lucene84SkipReader 
         // is a little different from MultiLevelSkipListReader
         final int newDocUpto = skipper.skipTo(target) + 1;
+        seekCountPostings += skipper.getAndResetSeekCountPostings();
   
         if (newDocUpto > docUpto) {
           // Skipper moved
