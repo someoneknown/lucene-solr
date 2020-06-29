@@ -222,6 +222,7 @@ public final class BKDReader extends PointValues implements Accountable {
     } else {
       packedIndex = new BKDOnHeapInput(slice, numBytes);
     }
+
     this.in = in;
   }
 
@@ -585,6 +586,7 @@ public final class BKDReader extends PointValues implements Accountable {
     // How many points are stored in this leaf cell:
     int count = in.readVInt();
     // No need to call grow(), it has been called up-front
+
     DocIdsWriter.readInts(in, count, visitor);
   }
 
@@ -593,6 +595,7 @@ public final class BKDReader extends PointValues implements Accountable {
     seekCountPoints++;
     // How many points are stored in this leaf cell:
     int count = in.readVInt();
+
     DocIdsWriter.readInts(in, count, iterator.docIDs);
 
     return count;

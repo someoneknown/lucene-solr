@@ -160,6 +160,7 @@ final class SegmentTermsEnumFrame {
       ste.incrementSeekCountTermDic();
     }
     ste.initIndexInput();
+
     if (nextEnt != -1) {
       // Already loaded
       return;

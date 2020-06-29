@@ -780,6 +780,7 @@ public final class Lucene84PostingsReader extends PostingsReaderBase {
           if (needsPayloads) {
             pforUtil.decode(payIn, payloadLengthBuffer);
             int numBytes = payIn.readVInt();
+
             if (numBytes > payloadBytes.length) {
               payloadBytes = ArrayUtil.grow(payloadBytes, numBytes);
             }

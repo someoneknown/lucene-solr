@@ -132,7 +132,7 @@ public class CompiledAutomaton implements Accountable {
     return foundState;
   }
 
-  /** Create this.  If finite is null, we use
+  /** Create this.  If finite is null, we use {@link Operations#isFinite}
    *  to determine whether it is finite.  If simplify is true, we run
    *  possibly expensive operations to determine if the automaton is one
    *  the cases in {@link CompiledAutomaton.AUTOMATON_TYPE}. */
@@ -141,7 +141,7 @@ public class CompiledAutomaton implements Accountable {
   }
 
 
-  /** Create this.  If finite is null, we use
+  /** Create this.  If finite is null, we use {@link Operations#isFinite}
    *  to determine whether it is finite.  If simplify is true, we run
    *  possibly expensive operations to determine if the automaton is one
    *  the cases in {@link CompiledAutomaton.AUTOMATON_TYPE}. If simplify
