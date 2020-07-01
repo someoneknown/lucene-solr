@@ -58,7 +58,6 @@ public abstract class LeafReader extends IndexReader {
     return readerContext;
   }
 
-
   /**
    * Optional method: Return a {@link IndexReader.CacheHelper} that can be used to cache
    * based on the content of this leaf regardless of deletions. Two readers
