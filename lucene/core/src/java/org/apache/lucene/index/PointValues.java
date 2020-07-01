@@ -95,15 +95,10 @@ public abstract class PointValues {
   public int getSeekCountPoints() {
     return seekCountPoints;
   }
-  public void incrementSeekCountPoints() {
-    seekCountPoints++;
-  }
-  public void incrementSeekCountPoints(int x) {
-    seekCountPoints += x;
-  }
   public void setSeekCountPoints(int x) {
     seekCountPoints = x;
   }
+
   /** Return the cumulated number of points across all leaves of the given
    * {@link IndexReader}. Leaves that do not have points for the given field
    * are ignored.
