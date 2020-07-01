@@ -78,14 +78,6 @@ public abstract class PostingsEnum extends DocIdSetIterator {
     this.seekCountPostings = seekCountPostings;
   }
 
-  public void incrementSeekCountPostings() {
-    seekCountPostings += 1;
-  }
-
-  public void incrementSeekCountPostings(int x) {
-    seekCountPostings += x;
-  }
-
   /**
    * Returns term frequency in the current document, or 1 if the field was
    * indexed with {@link IndexOptions#DOCS}. Do not call this before
