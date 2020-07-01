@@ -246,7 +246,7 @@ public abstract class PointRangeQuery extends Query {
           // No docs in this segment/field indexed any points
           return null;
         }
-
+        context.addPointValues(values);
         if (values.getNumIndexDimensions() != numDims) {
           throw new IllegalArgumentException("field=\"" + field + "\" was indexed with numIndexDimensions=" + values.getNumIndexDimensions() + " but this query has numDims=" + numDims);
         }
