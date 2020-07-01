@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.lucene.codecs.MultiLevelSkipListReader;
-import org.apache.lucene.index.PostingsEnum;
 import org.apache.lucene.store.IndexInput;
 
 /**

@@ -58,10 +58,6 @@ public abstract class LeafReader extends IndexReader {
     return readerContext;
   }
 
-  @Override
-  public int getSeekCountTermDic() {
-    return super.getSeekCountTermDic();
-  }
 
   /**
    * Optional method: Return a {@link IndexReader.CacheHelper} that can be used to cache
