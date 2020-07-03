@@ -61,6 +61,7 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
   private final IndexInput data;
   private final int maxDoc;
   private int version = -1;
+  private long timer;
 
   /** expert: instantiates a new reader */
   Lucene80DocValuesProducer(SegmentReadState state, String dataCodec, String dataExtension, String metaCodec, String metaExtension) throws IOException {
@@ -111,6 +112,14 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
         IOUtils.closeWhileHandlingException(this.data);
       }
     }
+  }
+
+  private void startTimer() {
+    timer = System.nanoTime();
+  }
+
+  private void stopTimer() {
+    timer = System.nanoTime() - timer;
   }
 
   private void readFields(ChecksumIndexInput meta, FieldInfos infos) throws IOException {
@@ -469,10 +478,12 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
           }
         };
       } else {
+        startTimer();
         final RandomAccessInput slice = data.randomAccessSlice(entry.valuesOffset, entry.valuesLength);
+        stopTimer();
         if (entry.blockShift >= 0) {
           // dense but split into blocks of different bits per value
-          return new DenseNumericDocValues(maxDoc) {
+          NumericDocValues dv = new DenseNumericDocValues(maxDoc) {
             final VaryingBPVReader vBPVReader = new VaryingBPVReader(entry, slice);
 
             @Override
@@ -480,25 +491,34 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
               return vBPVReader.getLongValue(doc);
             }
           };
+          dv.setSeekCountDocValues(1);
+          dv.setSeekTimeDocValues(timer);
+          return dv;
         } else {
           final LongValues values = DirectReader.getInstance(slice, entry.bitsPerValue);
           if (entry.table != null) {
             final long[] table = entry.table;
-            return new DenseNumericDocValues(maxDoc) {
+            NumericDocValues dv = new DenseNumericDocValues(maxDoc) {
               @Override
               public long longValue() throws IOException {
                 return table[(int) values.get(doc)];
               }
             };
+            dv.setSeekCountDocValues(1);
+            dv.setSeekTimeDocValues(timer);
+            return dv;
           } else {
             final long mul = entry.gcd;
             final long delta = entry.minValue;
-            return new DenseNumericDocValues(maxDoc) {
+            NumericDocValues dv = new DenseNumericDocValues(maxDoc) {
               @Override
               public long longValue() throws IOException {
                 return mul * values.get(doc) + delta;
               }
             };
+            dv.setSeekCountDocValues(1);
+            dv.setSeekTimeDocValues(timer);
+            return dv;
           }
         }
       }
@@ -507,17 +527,21 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
       final IndexedDISI disi = new IndexedDISI(data, entry.docsWithFieldOffset, entry.docsWithFieldLength,
           entry.jumpTableEntryCount, entry.denseRankPower, entry.numValues);
       if (entry.bitsPerValue == 0) {
-        return new SparseNumericDocValues(disi) {
+        NumericDocValues dv = new SparseNumericDocValues(disi) {
           @Override
           public long longValue() throws IOException {
             return entry.minValue;
           }
         };
+        dv.setInput(disi);
+        return dv;
       } else {
+        startTimer();
         final RandomAccessInput slice = data.randomAccessSlice(entry.valuesOffset, entry.valuesLength);
+        stopTimer();
         if (entry.blockShift >= 0) {
           // sparse and split into blocks of different bits per value
-          return new SparseNumericDocValues(disi) {
+          NumericDocValues dv = new SparseNumericDocValues(disi) {
             final VaryingBPVReader vBPVReader = new VaryingBPVReader(entry, slice);
 
             @Override
@@ -526,25 +550,37 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
               return vBPVReader.getLongValue(index);
             }
           };
+          dv.setSeekCountDocValues(1);
+          dv.setSeekTimeDocValues(timer);
+          dv.setInput(disi);
+          return dv;
         } else {
           final LongValues values = DirectReader.getInstance(slice, entry.bitsPerValue);
           if (entry.table != null) {
             final long[] table = entry.table;
-            return new SparseNumericDocValues(disi) {
+            NumericDocValues dv = new SparseNumericDocValues(disi) {
               @Override
               public long longValue() throws IOException {
                 return table[(int) values.get(disi.index())];
               }
             };
+            dv.setSeekCountDocValues(1);
+            dv.setSeekTimeDocValues(timer);
+            dv.setInput(disi);
+            return dv;
           } else {
             final long mul = entry.gcd;
             final long delta = entry.minValue;
-            return new SparseNumericDocValues(disi) {
+            NumericDocValues dv = new SparseNumericDocValues(disi) {
               @Override
               public long longValue() throws IOException {
                 return mul * values.get(disi.index()) + delta;
               }
             };
+            dv.setSeekCountDocValues(1);
+            dv.setSeekTimeDocValues(timer);
+            dv.setInput(disi);
+            return dv;
           }
         }
       }
@@ -686,40 +722,55 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
     if (entry.docsWithFieldOffset == -2) {
       return DocValues.emptyBinary();
     }
-
+    startTimer();
     final IndexInput bytesSlice = data.slice("fixed-binary", entry.dataOffset, entry.dataLength);
-
+    stopTimer();
+    long timeTaken = timer;
     if (entry.docsWithFieldOffset == -1) {
       // dense
       if (entry.minLength == entry.maxLength) {
         // fixed length
         final int length = entry.maxLength;
-        return new DenseBinaryDocValues(maxDoc) {
+        BinaryDocValues dv = new DenseBinaryDocValues(maxDoc) {
           final BytesRef bytes = new BytesRef(new byte[length], 0, length);
 
           @Override
           public BytesRef binaryValue() throws IOException {
+            startTimer();
             bytesSlice.seek((long) doc * length);
+            stopAndIncrementTimer();
+            seekCountDocValues++;
             bytesSlice.readBytes(bytes.bytes, 0, length);
             return bytes;
           }
         };
+        dv.setSeekCountDocValues(1);
+        dv.setSeekTimeDocValues(timeTaken);
+        return dv;
       } else {
         // variable length
+        startTimer();
         final RandomAccessInput addressesData = this.data.randomAccessSlice(entry.addressesOffset, entry.addressesLength);
+        stopTimer();
         final LongValues addresses = DirectMonotonicReader.getInstance(entry.addressesMeta, addressesData);
-        return new DenseBinaryDocValues(maxDoc) {
+        BinaryDocValues dv = new DenseBinaryDocValues(maxDoc) {
           final BytesRef bytes = new BytesRef(new byte[entry.maxLength], 0, entry.maxLength);
 
           @Override
           public BytesRef binaryValue() throws IOException {
             long startOffset = addresses.get(doc);
             bytes.length = (int) (addresses.get(doc + 1L) - startOffset);
+            startTimer();
             bytesSlice.seek(startOffset);
+            stopAndIncrementTimer();
+            seekCountDocValues++;
             bytesSlice.readBytes(bytes.bytes, 0, bytes.length);
             return bytes;
           }
         };
+        dv.setSeekCountDocValues(2);
+        dv.setSeekTimeDocValues(timer + timeTaken);
+        return dv;
       }
     } else {
       // sparse
@@ -728,21 +779,30 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
       if (entry.minLength == entry.maxLength) {
         // fixed length
         final int length = entry.maxLength;
-        return new SparseBinaryDocValues(disi) {
+        BinaryDocValues dv = new SparseBinaryDocValues(disi) {
           final BytesRef bytes = new BytesRef(new byte[length], 0, length);
 
           @Override
           public BytesRef binaryValue() throws IOException {
+            startTimer();
             bytesSlice.seek((long) disi.index() * length);
+            stopAndIncrementTimer();
+            seekCountDocValues++;
             bytesSlice.readBytes(bytes.bytes, 0, length);
             return bytes;
           }
         };
+        dv.setInput(disi);
+        dv.setSeekCountDocValues(1);
+        dv.setSeekTimeDocValues(timer);
+        return dv;
       } else {
         // variable length
+        startTimer();
         final RandomAccessInput addressesData = this.data.randomAccessSlice(entry.addressesOffset, entry.addressesLength);
+        stopTimer();
         final LongValues addresses = DirectMonotonicReader.getInstance(entry.addressesMeta, addressesData);
-        return new SparseBinaryDocValues(disi) {
+        BinaryDocValues dv = new SparseBinaryDocValues(disi) {
           final BytesRef bytes = new BytesRef(new byte[entry.maxLength], 0, entry.maxLength);
 
           @Override
@@ -755,6 +815,10 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
             return bytes;
           }
         };
+        dv.setInput(disi);
+        dv.setSeekTimeDocValues(timeTaken + timer);
+        dv.setSeekCountDocValues(2);
+        return dv;
       }
     }
   }  
@@ -838,7 +902,15 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
       uncompressedBytesRef.offset = uncompressedDocStarts[docInBlockId];        
       uncompressedBytesRef.length = uncompressedDocStarts[docInBlockId +1] - uncompressedBytesRef.offset;
       return uncompressedBytesRef;
-    }    
+    }
+
+    public long getLastBlockId() {
+      return lastBlockId;
+    }
+
+    public int getDocsPerChunkShift() {
+      return docsPerChunkShift;
+    }
   }
   
 
@@ -854,30 +926,63 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
     }
     if (entry.docsWithFieldOffset == -1) {
       // dense
+      startTimer();
       final RandomAccessInput addressesData = this.data.randomAccessSlice(entry.addressesOffset, entry.addressesLength);
+      stopTimer();
       final LongValues addresses = DirectMonotonicReader.getInstance(entry.addressesMeta, addressesData);
-      return new DenseBinaryDocValues(maxDoc) {
-        BinaryDecoder decoder = new BinaryDecoder(addresses, data.clone(), entry.maxUncompressedChunkSize, entry.docsPerChunkShift);
-
-        @Override
-        public BytesRef binaryValue() throws IOException {          
-          return decoder.decode(doc);
-        }
-      };
-    } else {
-      // sparse
-      final IndexedDISI disi = new IndexedDISI(data, entry.docsWithFieldOffset, entry.docsWithFieldLength,
-          entry.jumpTableEntryCount, entry.denseRankPower, entry.numDocsWithField);
-      final RandomAccessInput addressesData = this.data.randomAccessSlice(entry.addressesOffset, entry.addressesLength);
-      final LongValues addresses = DirectMonotonicReader.getInstance(entry.addressesMeta, addressesData);
-      return new SparseBinaryDocValues(disi) {
+      BinaryDocValues dv = new DenseBinaryDocValues(maxDoc) {
         BinaryDecoder decoder = new BinaryDecoder(addresses, data.clone(), entry.maxUncompressedChunkSize, entry.docsPerChunkShift);
 
         @Override
         public BytesRef binaryValue() throws IOException {
-          return decoder.decode(disi.index());
+          int docNumber = doc;
+          int blockId = docNumber >> decoder.getDocsPerChunkShift();
+          BytesRef decodedBytes = null;
+          if(blockId != decoder.getLastBlockId()) {
+            startTimer();
+            decodedBytes = decoder.decode(docNumber);
+            stopAndIncrementTimer();
+            seekCountDocValues++;
+          } else {
+            decodedBytes = decoder.decode(docNumber);
+          }
+          return decodedBytes;
         }
       };
+      dv.setSeekCountDocValues(1);
+      dv.setSeekTimeDocValues(timer);
+      return dv;
+    } else {
+      // sparse
+      final IndexedDISI disi = new IndexedDISI(data, entry.docsWithFieldOffset, entry.docsWithFieldLength,
+          entry.jumpTableEntryCount, entry.denseRankPower, entry.numDocsWithField);
+      startTimer();
+      final RandomAccessInput addressesData = this.data.randomAccessSlice(entry.addressesOffset, entry.addressesLength);
+      stopTimer();
+      final LongValues addresses = DirectMonotonicReader.getInstance(entry.addressesMeta, addressesData);
+      BinaryDocValues dv = new SparseBinaryDocValues(disi) {
+        BinaryDecoder decoder = new BinaryDecoder(addresses, data.clone(), entry.maxUncompressedChunkSize, entry.docsPerChunkShift);
+
+        @Override
+        public BytesRef binaryValue() throws IOException {
+          int docNumber = disi.index();
+          int blockId = docNumber >> decoder.getDocsPerChunkShift();
+          BytesRef decodedBytes = null;
+          if(blockId != decoder.getLastBlockId()) {
+            startTimer();
+            decodedBytes = decoder.decode(docNumber);
+            stopAndIncrementTimer();
+            seekCountDocValues++;
+          } else {
+            decodedBytes = decoder.decode(docNumber);
+          }
+          return decodedBytes;
+        }
+      };
+      dv.setInput(disi);
+      dv.setSeekCountDocValues(1);
+      dv.setSeekTimeDocValues(timer);
+      return dv;
     }
   }
 
@@ -900,14 +1005,17 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
           return 0L;
         }
       };
+      timer = 0;
     } else {
+      startTimer();
       final RandomAccessInput slice = data.randomAccessSlice(entry.ordsOffset, entry.ordsLength);
+      stopTimer();
       ords = DirectReader.getInstance(slice, entry.bitsPerValue);
     }
 
     if (entry.docsWithFieldOffset == -1) {
       // dense
-      return new BaseSortedDocValues(entry, data) {
+      SortedDocValues dv = new BaseSortedDocValues(entry, data) {
 
         int doc = -1;
 
@@ -945,11 +1053,16 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
           return (int) ords.get(doc);
         }
       };
+      if(timer != 0) {
+        dv.setSeekCountDocValues(1);
+        dv.setSeekTimeDocValues(timer);
+      }
+      return dv;
     } else {
       // sparse
       final IndexedDISI disi = new IndexedDISI(data, entry.docsWithFieldOffset, entry.docsWithFieldLength,
           entry.jumpTableEntryCount, entry.denseRankPower, entry.numDocsWithField);
-      return new BaseSortedDocValues(entry, data) {
+      SortedDocValues dv = new BaseSortedDocValues(entry, data) {
 
         @Override
         public int nextDoc() throws IOException {
@@ -981,6 +1094,12 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
           return (int) ords.get(disi.index());
         }
       };
+      if(timer != 0) {
+        dv.setInput(disi);
+        dv.setSeekCountDocValues(1);
+        dv.setSeekTimeDocValues(timer);
+      }
+      return dv;
     }
   }
 
@@ -1256,14 +1375,24 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
       return DocValues.singleton(getNumeric(entry));
     }
 
+    startTimer();
     final RandomAccessInput addressesInput = data.randomAccessSlice(entry.addressesOffset, entry.addressesLength);
+    stopTimer();
     final LongValues addresses = DirectMonotonicReader.getInstance(entry.addressesMeta, addressesInput);
-
-    final LongValues values = getNumericValues(entry);
+    long timeTaken = timer;
+    final LongValues values;
+    if(entry.bitsPerValue != 0) {
+      startTimer();
+      values = getNumericValues(entry);
+      stopTimer();
+      timeTaken += timer;
+    } else {
+      values = getNumericValues(entry);
+    }
 
     if (entry.docsWithFieldOffset == -1) {
       // dense
-      return new SortedNumericDocValues() {
+      SortedNumericDocValues dv = new SortedNumericDocValues() {
 
         int doc = -1;
         long start, end;
@@ -1314,11 +1443,16 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
           return count;
         }
       };
+      if(timeTaken != timer) {
+        dv.setSeekCountDocValues(2);
+      }
+      dv.setSeekTimeDocValues(timeTaken);
+      return dv;
     } else {
       // sparse
       final IndexedDISI disi = new IndexedDISI(data, entry.docsWithFieldOffset, entry.docsWithFieldLength,
           entry.jumpTableEntryCount, entry.denseRankPower, entry.numDocsWithField);
-      return new SortedNumericDocValues() {
+      SortedNumericDocValues dv = new SortedNumericDocValues() {
 
         boolean set;
         long start, end;
@@ -1375,6 +1509,12 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
         }
 
       };
+      if(timeTaken != timer) {
+        dv.setSeekCountDocValues(2);
+      }
+      dv.setSeekTimeDocValues(timeTaken);
+      dv.setInput(disi);
+      return dv;
     }
   }
 
@@ -1384,16 +1524,20 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
     if (entry.singleValueEntry != null) {
       return DocValues.singleton(getSorted(entry.singleValueEntry));
     }
-
+    startTimer();
     final RandomAccessInput slice = data.randomAccessSlice(entry.ordsOffset, entry.ordsLength);
+    stopTimer();
     final LongValues ords = DirectReader.getInstance(slice, entry.bitsPerValue);
 
+    long timeTaken = timer;
+    startTimer();
     final RandomAccessInput addressesInput = data.randomAccessSlice(entry.addressesOffset, entry.addressesLength);
+    stopTimer();
     final LongValues addresses = DirectMonotonicReader.getInstance(entry.addressesMeta, addressesInput);
 
     if (entry.docsWithFieldOffset == -1) {
       // dense
-      return new BaseSortedSetDocValues(entry, data) {
+      SortedSetDocValues dv = new BaseSortedSetDocValues(entry, data) {
 
         int doc = -1;
         long start;
@@ -1441,11 +1585,14 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
         }
 
       };
+      dv.setSeekCountDocValues(2);
+      dv.setSeekTimeDocValues(timeTaken);
+      return dv;
     } else {
       // sparse
       final IndexedDISI disi = new IndexedDISI(data, entry.docsWithFieldOffset, entry.docsWithFieldLength,
           entry.jumpTableEntryCount, entry.denseRankPower, entry.numDocsWithField);
-      return new BaseSortedSetDocValues(entry, data) {
+      SortedSetDocValues dv = new BaseSortedSetDocValues(entry, data) {
 
         boolean set;
         long start;
@@ -1496,6 +1643,9 @@ final class Lucene80DocValuesProducer extends DocValuesProducer implements Close
         }
 
       };
+      dv.setSeekCountDocValues(2);
+      dv.setSeekTimeDocValues(timeTaken);
+      return dv;
     }
   }
 

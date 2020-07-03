@@ -410,14 +410,20 @@ final class IndexedDISI extends DocIdSetIterator {
       final int index = jumpTable.readInt(inRangeBlockIndex*Integer.BYTES*2);
       final int offset = jumpTable.readInt(inRangeBlockIndex*Integer.BYTES*2+Integer.BYTES);
       this.nextBlockIndex = index-1; // -1 to compensate for the always-added 1 in readBlockHeader
+      startTimer();
       slice.seek(offset);
+      stopAndIncrementTimer();
+      seekCountDocValues++;
       readBlockHeader();
       return;
     }
 
     // Fallback to iteration of blocks
     do {
+      startTimer();
       slice.seek(blockEnd);
+      stopAndIncrementTimer();
+      seekCountDocValues++;
       readBlockHeader();
     } while (block < targetBlock);
   }
@@ -498,7 +504,10 @@ final class IndexedDISI extends DocIdSetIterator {
           if (doc >= targetInBlock) {
             if (doc != targetInBlock) {
               disi.index--;
+              disi.startTimer();
               disi.slice.seek(disi.slice.getFilePointer() - Short.BYTES);
+              disi.stopAndIncrementTimer();
+              disi.seekCountDocValues++;
               break;
             }
             disi.exists = true;
@@ -620,7 +629,10 @@ final class IndexedDISI extends DocIdSetIterator {
 
     // Position the counting logic just after the rank point
     final int rankAlignedWordIndex = rankIndex << disi.denseRankPower >> 6;
+    disi.startTimer();
     disi.slice.seek(disi.denseBitmapOffset + rankAlignedWordIndex*Long.BYTES);
+    disi.stopAndIncrementTimer();
+    disi.seekCountDocValues++;
     long rankWord = disi.slice.readLong();
     int denseNOO = rank + Long.bitCount(rankWord);
 

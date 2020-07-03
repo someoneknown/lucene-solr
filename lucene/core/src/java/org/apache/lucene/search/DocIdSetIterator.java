@@ -29,6 +29,34 @@ import java.io.IOException;
 public abstract class DocIdSetIterator {
   
   /** An empty {@code DocIdSetIterator} instance */
+  protected int seekCountDocValues;
+  protected long seekTimeDocValues;
+  protected long seekTimer;
+
+  public long getSeekTimeDocValues() {
+    return seekTimeDocValues;
+  }
+
+  public void setSeekTimeDocValues(long seekTimeDocValues) {
+    this.seekTimeDocValues = seekTimeDocValues;
+  }
+
+  public int getSeekCountDocValues() {
+    return seekCountDocValues;
+  }
+
+  public void setSeekCountDocValues(int seekCountDocValues) {
+    this.seekCountDocValues = seekCountDocValues;
+  }
+
+  public void startTimer() {
+    seekTimer = System.nanoTime();
+  }
+
+  public void stopAndIncrementTimer() {
+    seekTimeDocValues += System.nanoTime() - seekTimer;
+    seekTimer = 0;
+  }
   public static final DocIdSetIterator empty() {
     return new DocIdSetIterator() {
       boolean exhausted = false;

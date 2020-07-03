@@ -19,14 +19,12 @@ package org.apache.lucene.index;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.WeakHashMap;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.DocumentStoredFieldVisitor;
+import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.store.AlreadyClosedException;
 import org.apache.lucene.util.Bits;  // javadocs
 
@@ -82,10 +80,41 @@ public abstract class IndexReader implements Closeable {
   private boolean closedByChild = false;
   private final AtomicInteger refCount = new AtomicInteger(1);
   protected int seekCountTermDic;
+  protected List<DocValuesIterator> docValuesIterators;
   IndexReader() {
     if (!(this instanceof CompositeReader || this instanceof LeafReader))
       throw new Error("IndexReader should never be directly extended, subclass LeafReader or CompositeReader instead.");
+    docValuesIterators = new ArrayList<>();
   }
+
+  public void addDocValuesIterator(DocValuesIterator docValuesIterator) {
+    docValuesIterators.add(docValuesIterator);
+  }
+
+  public int getLengthOfDocValuesIterator() {
+    return docValuesIterators.size();
+  }
+
+  public boolean isEmptyDocValuesIterator() {
+    return docValuesIterators == null || docValuesIterators.isEmpty();
+  }
+
+  public long getSeekTimeDocValuesIteratorAt(int index) {
+    return docValuesIterators.get(index).getSeekTimeDocValues();
+  }
+
+  public int getSeekCountDocValuesIteratorAt(int index) {
+    return docValuesIterators.get(index).getSeekCountDocValues();
+  }
+
+  public void resetDocValuesIteratorAt(int index) {
+    docValuesIterators.get(index).reset();
+  }
+
+  public DocIdSetIterator getDocIdSetIteratorAt(int index) {
+    return docValuesIterators.get(index).getInput();
+  }
+
   public int getSeekCountTermDic() {
     return seekCountTermDic;
   }
