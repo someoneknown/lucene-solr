@@ -340,7 +340,6 @@ public class CompiledAutomaton implements Accountable {
     case SINGLE:
       return new SingleTermsEnum(terms.iterator(), term);
     case NORMAL:
-      terms.isTypeNormal = true;
       return terms.intersect(this, null);
     default:
       // unreachable

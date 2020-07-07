@@ -29,7 +29,7 @@ import org.apache.lucene.util.automaton.CompiledAutomaton;
  */
 
 public abstract class Terms {
-  public boolean isTypeNormal;
+
   /** Sole constructor. (For invocation by subclass 
    *  constructors, typically implicit.) */
   protected Terms() {
