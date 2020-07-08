@@ -255,4 +255,9 @@ public abstract class FilteredTermsEnum extends TermsEnum {
     }
   }
 
+  @Override
+  public int getSeekCountTermDic() {
+    return tenum.getSeekCountTermDic();
+  }
+
 }

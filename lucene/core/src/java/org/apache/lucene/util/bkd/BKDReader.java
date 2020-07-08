@@ -258,6 +258,19 @@ public final class BKDReader extends PointValues implements Accountable {
     private final byte[][] splitValuesStack;
     // scratch value to return from getPackedValue:
     private final BytesRef scratch;
+    // to check if reading from heap
+    private boolean isHeap;
+
+    public void increment() {
+      if(!isHeap) {
+        seekCountPoints++;
+      }
+    }
+    public void increment(int x) {
+      if(!isHeap) {
+        seekCountPoints += x;
+      }
+    }
 
     IndexTree() {
       int treeDepth = getTreeDepth();
@@ -273,6 +286,9 @@ public final class BKDReader extends PointValues implements Accountable {
       negativeDeltas = new boolean[numIndexDims*(treeDepth+1)];
 
       in = packedIndex.clone();
+      if(in instanceof BKDOnHeapInput) {
+        isHeap = true;
+      }
       splitValuesStack[0] = new byte[packedIndexBytesLength];
       readNodeData(false);
       scratch = new BytesRef();
@@ -291,6 +307,7 @@ public final class BKDReader extends PointValues implements Accountable {
       negativeDeltas[level*numIndexDims+splitDim] = true;
       try {
         in.setPosition(nodePosition);
+        increment();
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
@@ -565,7 +582,7 @@ public final class BKDReader extends PointValues implements Accountable {
   private void visitDocIDs(IndexInput in, long blockFP, IntersectVisitor visitor) throws IOException {
     // Leaf node
     in.seek(blockFP);
-
+    seekCountPoints++;
     // How many points are stored in this leaf cell:
     int count = in.readVInt();
     // No need to call grow(), it has been called up-front
@@ -575,7 +592,7 @@ public final class BKDReader extends PointValues implements Accountable {
 
   int readDocIDs(IndexInput in, long blockFP, BKDReaderDocIDSetIterator iterator) throws IOException {
     in.seek(blockFP);
-
+    seekCountPoints++;
     // How many points are stored in this leaf cell:
     int count = in.readVInt();
 

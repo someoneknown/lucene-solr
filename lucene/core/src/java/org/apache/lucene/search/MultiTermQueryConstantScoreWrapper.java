@@ -119,11 +119,13 @@ final class MultiTermQueryConstantScoreWrapper<Q extends MultiTermQuery> extends
         for (int i = 0; i < threshold; ++i) {
           final BytesRef term = termsEnum.next();
           if (term == null) {
+            context.reader().incrementSeekCountTermDic(termsEnum.getSeekCountTermDic());
             return true;
           }
           TermState state = termsEnum.termState();
           terms.add(new TermAndState(BytesRef.deepCopyOf(term), state, termsEnum.docFreq(), termsEnum.totalTermFreq()));
         }
+        context.reader().incrementSeekCountTermDic(termsEnum.getSeekCountTermDic());
         return termsEnum.next() == null;
       }
 

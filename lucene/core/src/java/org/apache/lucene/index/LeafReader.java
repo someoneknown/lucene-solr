@@ -80,8 +80,10 @@ public abstract class LeafReader extends IndexReader {
     }
     final TermsEnum termsEnum = terms.iterator();
     if (termsEnum.seekExact(term.bytes())) {
+      incrementSeekCountTermDic(termsEnum.getSeekCountTermDic());
       return termsEnum.docFreq();
     } else {
+      incrementSeekCountTermDic(termsEnum.getSeekCountTermDic());
       return 0;
     }
   }

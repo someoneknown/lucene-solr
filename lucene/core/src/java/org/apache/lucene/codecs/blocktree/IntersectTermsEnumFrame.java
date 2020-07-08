@@ -179,6 +179,7 @@ final class IntersectTermsEnumFrame {
     }
 
     ite.in.seek(fp);
+    ite.incrementSeekCountTermDic();
     int code = ite.in.readVInt();
     entCount = code >>> 1;
     assert entCount > 0;

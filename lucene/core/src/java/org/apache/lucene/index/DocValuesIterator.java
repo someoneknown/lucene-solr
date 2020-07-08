@@ -22,6 +22,45 @@ import org.apache.lucene.search.DocIdSetIterator;
 
 abstract class DocValuesIterator extends DocIdSetIterator {
 
+  protected DocIdSetIterator input;
+  protected long seekTimeDocValues;
+  protected int seekCountDocValues;
+
+  public long getSeekTimeDocValues() {
+    return seekTimeDocValues;
+  }
+
+  public void setSeekTimeDocValues(long seekTimeDocValues) {
+    this.seekTimeDocValues = seekTimeDocValues;
+  }
+
+  public int getSeekCountDocValues() {
+    return seekCountDocValues;
+  }
+
+  public void setSeekCountDocValues(int seekCountDocValues) {
+    this.seekCountDocValues = seekCountDocValues;
+  }
+
+  public DocIdSetIterator getInput() {
+    return input;
+  }
+
+  public void setInput(DocIdSetIterator input) {
+    this.input = input;
+  }
+
+  public void reset() {
+    seekCountDocValues = 0;
+    seekTimeDocValues = 0;
+    if(input != null) {
+      input.setSeekCountDocValues(0);
+    }
+    if(input != null) {
+      input.setSeekTimeDocValues(0);
+    }
+  }
+
   /** Advance the iterator to exactly {@code target} and return whether
    *  {@code target} has a value.
    *  {@code target} must be greater than or equal to the current

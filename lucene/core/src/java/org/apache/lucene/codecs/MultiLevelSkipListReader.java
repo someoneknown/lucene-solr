@@ -21,6 +21,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.apache.lucene.index.PostingsEnum;
 import org.apache.lucene.store.BufferedIndexInput;
 import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.util.MathUtil;
@@ -83,6 +84,7 @@ public abstract class MultiLevelSkipListReader implements Closeable {
   
   private boolean inputIsBuffered;
   private final int skipMultiplier;
+  protected int seekCountPostings;
 
   /** Creates a {@code MultiLevelSkipListReader}. */
   protected MultiLevelSkipListReader(IndexInput skipStream, int maxSkipLevels, int skipInterval, int skipMultiplier) {
@@ -145,7 +147,7 @@ public abstract class MultiLevelSkipListReader implements Closeable {
     
     return numSkipped[0] - skipInterval[0] - 1;
   }
-  
+
   private boolean loadNextSkip(int level) throws IOException {
     // we have to skip, the target document is greater than the current
     // skip list entry        
@@ -176,6 +178,7 @@ public abstract class MultiLevelSkipListReader implements Closeable {
   /** Seeks the skip entry on the given level */
   protected void seekChild(int level) throws IOException {
     skipStream[level].seek(lastChildPointer);
+    seekCountPostings++;
     numSkipped[level] = numSkipped[level + 1] - skipInterval[level + 1];
     skipDoc[level] = lastDoc;
     if (level > 0) {
@@ -207,7 +210,7 @@ public abstract class MultiLevelSkipListReader implements Closeable {
     }
     loadSkipLevels();
   }
-  
+
   /** Loads the skip levels  */
   private void loadSkipLevels() throws IOException {
     if (docCount <= skipInterval[0]) {
@@ -221,6 +224,7 @@ public abstract class MultiLevelSkipListReader implements Closeable {
     }
 
     skipStream[0].seek(skipPointer[0]);
+    seekCountPostings++;
     
     int toBuffer = numberOfLevelsToBuffer;
     
@@ -243,13 +247,23 @@ public abstract class MultiLevelSkipListReader implements Closeable {
         
         // move base stream beyond the current level
         skipStream[0].seek(skipStream[0].getFilePointer() + length);
+        seekCountPostings++;
       }
     }
    
     // use base stream for the lowest level
     skipPointer[0] = skipStream[0].getFilePointer();
   }
-  
+
+  /**
+   * Returns the value of seekCountPostings and resets the value to 0
+   */
+  public int getAndResetSeekCountPostings() {
+    int tmp = seekCountPostings;
+    seekCountPostings = 0;
+    return tmp;
+  }
+
   /**
    * Subclasses must implement the actual skip data encoding in this method.
    *  

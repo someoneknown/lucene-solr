@@ -16,6 +16,8 @@
  */
 package org.apache.lucene.index;
 
+import org.apache.lucene.search.DocIdSetIterator;
+
 import java.io.IOException;
 
 
@@ -76,5 +78,32 @@ final class SingletonSortedNumericDocValues extends SortedNumericDocValues {
   @Override
   public int docValueCount() {
     return 1;
+  }
+
+  @Override
+  public DocIdSetIterator getInput() {
+    return in.getInput();
+  }
+
+  @Override
+  public long getSeekTimeDocValues() {
+    return in.getSeekTimeDocValues();
+  }
+
+  @Override
+  public int getSeekCountDocValues() {
+    return in.getSeekCountDocValues();
+  }
+
+  @Override
+  public void reset() {
+    in.setSeekCountDocValues(0);
+    in.setSeekTimeDocValues(0);
+    if(in.getInput() != null) {
+      in.getInput().setSeekCountDocValues(0);
+    }
+    if(in.getInput() != null) {
+      in.getInput().setSeekTimeDocValues(0);
+    }
   }
 }

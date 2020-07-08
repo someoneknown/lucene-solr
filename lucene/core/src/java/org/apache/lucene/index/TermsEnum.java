@@ -42,6 +42,16 @@ import org.apache.lucene.util.BytesRefIterator;
  * @lucene.experimental */
 public abstract class TermsEnum implements BytesRefIterator {
 
+  protected int seekCountTermDic;
+  public int getSeekCountTermDic() {
+    return seekCountTermDic;
+  }
+  public void incrementSeekCountTermDic(int x) {
+    seekCountTermDic += x;
+  }
+  public void incrementSeekCountTermDic() {
+    seekCountTermDic++;
+  }
   /** Sole constructor. (For invocation by subclass 
    *  constructors, typically implicit.) */
   protected TermsEnum() {

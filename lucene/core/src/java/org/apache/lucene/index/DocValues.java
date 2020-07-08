@@ -332,6 +332,7 @@ public final class DocValues {
       checkField(reader, field, DocValuesType.NUMERIC);
       return emptyNumeric();
     } else {
+      reader.addDocValuesIterator(dv);
       return dv;
     }
   }
@@ -353,6 +354,7 @@ public final class DocValues {
         return emptyBinary();
       }
     }
+    reader.addDocValuesIterator(dv);
     return dv;
   }
   
@@ -369,6 +371,7 @@ public final class DocValues {
       checkField(reader, field, DocValuesType.SORTED);
       return emptySorted();
     } else {
+      reader.addDocValuesIterator(dv);
       return dv;
     }
   }
@@ -389,8 +392,10 @@ public final class DocValues {
         checkField(reader, field, DocValuesType.SORTED_NUMERIC, DocValuesType.NUMERIC);
         return emptySortedNumeric(reader.maxDoc());
       }
+      reader.addDocValuesIterator(single);
       return singleton(single);
     }
+    reader.addDocValuesIterator(dv);
     return dv;
   }
   
@@ -412,6 +417,7 @@ public final class DocValues {
       }
       dv = singleton(sorted);
     }
+    reader.addDocValuesIterator(dv);
     return dv;
   }
 
